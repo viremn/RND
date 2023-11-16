@@ -1,35 +1,28 @@
 import glob
 import tarfile
 import pandas as pd
-from io import BytesIO
-
-PATH = "/home/norrman/GitHub/RND/data/direct-assessments/"
-LANGS = "en", "de", "zh", "ru", "ro", "et"
-DATASET = 'dev'
-COL_NAMES = ['index', 'original', 'translation', 'scores', 
-             'mean', 'z_scores', 'z_mean', 'model_scores']
 
 class tarUnzipper:
     @staticmethod
-    def get_data(path, 
-                 langs, 
-                 datasplit,
+    def get_data(dir, 
+                 langs,
                  drop_cols=None, 
                  col_names=['index', 'original', 
                             'translation', 'scores',
                             'mean', 'z_scores', 
                             'z_mean', 'model_scores']):
-        paths = glob.glob(PATH + DATASET + '/*')
-        files = dict()
+
+        paths = [path for path in glob.glob(dir + '*' if dir.endswith('/') else dir + '/*')]
+
+
         dfs = dict()
 
-        for file in paths:
-            path, filename = '/'.join(file.split('/')[:-1]) + '/', file.split('/')[-1]
+        for p in paths:
+            path, filename = '/'.join(p.split('/')[:-1]) + '/', p.split('/')[-1]
             src, tgt = filename.split('-')[:2]
-            files[(src, tgt)] = {'path': path, 'filename': filename}
-        for key in files.keys():
-            if all(lang in LANGS for lang in key):
-                with tarfile.open(files[key]['path'] + files[key]['filename'], 'r:gz') as f:
+            key = src, tgt
+            if all(lang in langs for lang in key):
+                with tarfile.open(path + filename, 'r:gz') as f:
                     for member in f:
                         if member.name.endswith('.tsv'):
                             content = f.extractfile(member)
@@ -43,9 +36,13 @@ class tarUnzipper:
         return pd.concat(dfs.values(), axis=0, ignore_index=True)
     
         
-            
+
         
 
 if __name__ == '__main__':
-    
-    print(tarUnzipper.get_data(PATH, LANGS, DATASET, drop_cols=['index', 'z_mean', 'model_scores', 'z_scores']))
+    path = "/home/norrman/GitHub/RND/data/direct-assessments/train"
+    langs = "en", "de"
+    col_names = ['index', 'original', 'translation', 'scores', 
+                'mean', 'z_scores', 'z_mean', 'model_scores']
+
+    print(tarUnzipper.get_data(path, langs, drop_cols=['index', 'z_mean', 'model_scores', 'z_scores']))
