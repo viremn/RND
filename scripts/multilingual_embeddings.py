@@ -4,6 +4,8 @@ import torch
 import numpy as np
 
 from laserembeddings import Laser
+from sentence_transformers import SentenceTransformer
+from transformers import BertTokenizerFast, BertModel
 
 class MultilingualEmbeddings:
     def __init__(self, path, lang) -> None:
@@ -60,7 +62,6 @@ class MultilingualStaticSentenceEmbedder:
     def __len__(self):
         return sum(len(self.embeddings[key]) for key in self.embeddings)
 
-        
     def __call__(self, sents, langs):
         if isinstance(langs, str):
             langs = [langs for _ in range(len(sents))]
@@ -78,10 +79,82 @@ class LASERSentenceEmbedder:
     def __call__(self, sents, langs):
         return torch.from_numpy(self.embedder.embed_sentences(sents, lang=langs))
 
+class DistilUSEEmbedder:
+    def __init__(self) -> None:
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.embedder = SentenceTransformer('distiluse-base-multilingual-cased-v2', device=self.device)
+        for p in self.embedder.parameters():
+            p.requires_grad = False
+        self.outdim = 512
+
+    def __call__(self, sents, langs=None):
+        return self.embedder.encode(sents, convert_to_tensor=True)
+    
+class XLMREmbedder:
+    def __init__(self) -> None:
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.embedder = SentenceTransformer('sentence-transformers/stsb-xlm-r-multilingual', device=self.device)
+        for p in self.embedder.parameters():
+            p.requires_grad = False
+        self.outdim = 768
+
+    def __call__(self, sents, langs=None):
+        return self.embedder.encode(sents, convert_to_tensor=True)
+
+class ParaphraseEmbedder:
+    def __init__(self) -> None:
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.embedder = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2', device=self.device)
+        for p in self.embedder.parameters():
+            p.requires_grad = False
+        self.outdim = 768
+
+    def __call__(self, sents, langs=None):
+        return self.embedder.encode(sents, convert_to_tensor=True)
+
+class LaBSEEmbedder:
+    def __init__(self) -> None:
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.embedder = SentenceTransformer('LaBSE', device=self.device)
+        for p in self.embedder.parameters():
+            p.requires_grad = False
+            print(p.requires_grad)
+        self.outdim = 768
+
+    def __call__(self, sents, langs=None):
+        return self.embedder.encode(sents, convert_to_tensor=True)
+
+class BertSentenceEmbedder:
+    def __init__(self, pooling='cls') -> None:
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-multilingual-cased')
+        self.embedder = BertModel.from_pretrained('bert-base-multilingual-cased')
+        for p in self.embedder.parameters():
+            p.requires_grad = False
+        self.pooling = pooling
+        self.outdim = 768
+
+        self.embedder.to(self.device)
+
+    def __call__(self, sents, langs=None):
+        tokenized_sents = self.tokenizer(sents, return_tensors='pt', padding=True, truncation=True)
+        tokenized_sents.to(self.device)
+        output = self.embedder(**tokenized_sents)
+
+        if self.pooling == 'cls':
+            output = output.last_hidden_state[:, 0, :]
+        elif self.pooling == 'max':
+            output = torch.max(output.last_hidden_state, dim=1)[0]
+        elif self.pooling == 'mean':
+            output = torch.mean(output.last_hidden_state, dim=1)
+
+        return output
+
 
 if __name__ == '__main__':
-    embedder = MultilingualStaticSentenceEmbedder('/home/norrman/GitHub/RND/data/embeddings/multilingual_embeddings.tar.gz', langs=['en', 'ru', 'ro', 'de'])
+    # embedder = MultilingualStaticSentenceEmbedder('/home/norrman/GitHub/RND/data/embeddings/multilingual_embeddings.tar.gz', langs=['en', 'ru', 'ro', 'de'])
     # embedder = LASERSentenceEmbedder()
+    embedder = XLMREmbedder()
 
     test_data = ['this is a test', 'this is another test', 'what the .', 'what the .', 'what the .']
     langs = 'en'
@@ -89,5 +162,6 @@ if __name__ == '__main__':
 
     embeddings = embedder(test_data, langs)
     print(embeddings)
+    print(embeddings.shape)
 
 

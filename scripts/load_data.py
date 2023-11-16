@@ -40,8 +40,8 @@ class tarUnzipper:
         
 
 if __name__ == '__main__':
-    path = "/home/norrman/GitHub/RND/data/direct-assessments/train"
-    langs = "en", "de"
+    path = "/home/norrman/GitHub/RND/data/direct-assessments/test"
+    langs = "en", "de", "ro", "ru"
     col_names = ['index', 'original', 'translation', 'scores', 
                 'mean', 'z_scores', 'z_mean', 'model_scores']
 
