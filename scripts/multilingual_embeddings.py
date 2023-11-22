@@ -118,7 +118,6 @@ class LaBSEEmbedder:
         self.embedder = SentenceTransformer('LaBSE', device=self.device)
         for p in self.embedder.parameters():
             p.requires_grad = False
-            print(p.requires_grad)
         self.outdim = 768
 
     def __call__(self, sents, langs=None):
