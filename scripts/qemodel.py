@@ -222,7 +222,8 @@ if __name__ == '__main__':
     validation_dataset = QEDataset(data_path+'dev', langs)
 
     print('Loading Model...')
-    embedder =  DistilUSEEmbedder()
+    embedder =  MultilingualStaticSentenceEmbedder(embedding_file_path=embedding_path, langs=langs)
+    # embedder = XLMREmbedder()
 
     model = QEModel(encoder_dim=1024, 
                     encoder_depth=1, 
