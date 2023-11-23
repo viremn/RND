@@ -12,9 +12,9 @@ https://pypi.org/project/laserembeddings/
 
 
 # Environment Installation:
-conda create -n mtproj python=3.9
+conda create -n rndproj python=3.9
 
-conda activate mtproj
+conda activate rndproj
 
 conda install numpy pandas scipy scikit-learn
 conda install matplotlib seaborn

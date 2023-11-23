@@ -16,8 +16,8 @@ class tarUnzipper:
                             'mean', 'z_scores', 
                             'z_mean', 'model_scores'],
                  drop_cols=['index'],
-                 col_fn={'scores':json.loads,
-                         'z_scores':json.loads,
+                 col_fn={'scores': json.loads,
+                         'z_scores': json.loads,
                          'mean': np.float16,
                          'z_mean': np.float16,
                          'model_scores': np.float16,
@@ -27,6 +27,7 @@ class tarUnzipper:
 
         col_names = col_names + ['original_lang'] if 'original_lang' not in col_names else col_names
         col_names = col_names + ['translation_lang'] if 'translation_lang' not in col_names else col_names
+        
         df = pd.DataFrame(columns=col_names)
 
         data_dict = {col_name: list() for col_name in col_names}

@@ -31,7 +31,11 @@ class Encoder(nn.Module):
     
 
 class Predictor(nn.Module):
-    def __init__(self, encoder_dim, encoder_depth=1, shared_encoder_weights=False, embedder=None) -> None:
+    def __init__(self, 
+                 encoder_dim, 
+                 encoder_depth=1, 
+                 shared_encoder_weights=False, 
+                 embedder=None):
         super().__init__()
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.embedder = XLMREmbedder() if embedder is None else embedder
@@ -113,9 +117,14 @@ class QEModel(nn.Module):
         estimator_output = self.estimator(predictor_output)
         return torch.sigmoid(estimator_output)*100
     
-    def train_model(self, train_dataset, validation_dataset=None, batch_size=128, max_epochs=10, learning_rate=1e-3, weight_decay=1e-5):
+    def train_model(self, 
+                    train_dataset, 
+                    validation_dataset=None, 
+                    batch_size=128, 
+                    max_epochs=10, 
+                    learning_rate=1e-3, 
+                    weight_decay=1e-5):
         
-
         optimizer = optim.AdamW(self.parameters(), 
                                 lr=learning_rate, 
                                 weight_decay=weight_decay)
@@ -222,8 +231,8 @@ if __name__ == '__main__':
     validation_dataset = QEDataset(data_path+'dev', langs)
 
     print('Loading Model...')
-    embedder =  MultilingualStaticSentenceEmbedder(embedding_file_path=embedding_path, langs=langs)
-    # embedder = XLMREmbedder()
+    # embedder =  MultilingualStaticSentenceEmbedder(embedding_file_path=embedding_path, langs=langs)
+    embedder = XLMREmbedder()
 
     model = QEModel(encoder_dim=1024, 
                     encoder_depth=1, 
