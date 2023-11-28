@@ -6,7 +6,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch.utils.data import DataLoader
+import pandas as pd
+
+from torch.utils.data import DataLoader, Subset
 from torch import optim
 from tqdm import tqdm
 from scipy.stats import pearsonr
@@ -117,104 +119,219 @@ class QEModel(nn.Module):
         estimator_output = self.estimator(predictor_output)
         return torch.sigmoid(estimator_output)*100
     
-    def train_model(self, 
-                    train_dataset, 
-                    validation_dataset=None, 
-                    batch_size=128, 
-                    max_epochs=10, 
-                    learning_rate=1e-3, 
-                    weight_decay=1e-5):
+
+def train_model(model, 
+                dataset, 
+                validation_dataset=None,
+                validation_size=300, 
+                batch_size=128, 
+                max_epochs=10, 
+                learning_rate=1e-3, 
+                weight_decay=1e-5,
+                collate_fn=None,
+                checkpoint=None,
+                outdir='',
+                outname='model',
+                save_latest_checkpoint=True,
+                save_best_checkpoint=True,
+                save_current_checkpoint=False):
+    
+    if isinstance(outdir, str) and not outdir.endswith('/'):
+        outdir += '/'
+
+    optimizer = optim.AdamW(model.parameters(), 
+                            lr=learning_rate, 
+                            weight_decay=weight_decay)
+    criterion = nn.MSELoss()
+
+    history = {'train_loss': [], 'validation_loss': [], 'train_correlation': [], 'validation_correlation': []}
+    start_epoch = 0
+    
+    if checkpoint:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        history = checkpoint['history']
+        start_epoch = checkpoint['epoch'] + 1
+
+    if hasattr(dataset, 'collate_fn'):
+        collate_fn = dataset.collate_fn
+
+    if not validation_dataset and validation_size:
+        train_size = len(dataset) - validation_size
+        indices = torch.randperm(len(dataset)).tolist()
+        train_dataset = Subset(dataset, indices[:train_size])
+        validation_dataset = Subset(dataset, indices[train_size:])
+    else:
+        train_dataset = dataset
+
+    for epoch in range(start_epoch, max_epochs):
+        model.train()
+
+        train_loss = 0.0
+        running_output = list()
+        running_labels = list()
+
+        train_dataloader = DataLoader(train_dataset, 
+                                        batch_size=batch_size, 
+                                        shuffle=True, 
+                                        collate_fn=collate_fn, 
+                                        drop_last=False)
+        batches = tqdm(train_dataloader, 
+                        desc=f'Epoch {epoch+1}',
+                        unit='batch', 
+                        total=(len(train_dataset)//batch_size)+(1 if len(train_dataset)%batch_size else 0))
+
+        for i, batch in enumerate(batches):
+            output = model(batch['original'].tolist(),
+                            batch['translation'].tolist(),
+                            batch['original_lang'].tolist(),
+                            batch['translation_lang'].tolist())
+            
+            labels = torch.tensor(batch['mean'].tolist(), dtype=torch.float).to(model.device)
+
+            optimizer.zero_grad()
+
+            loss = criterion(output.squeeze(), labels)
+            loss.backward()
+            optimizer.step()
+
+            train_loss += loss.item() * len(output)
+            running_labels.extend(labels.reshape(-1,).detach().cpu().numpy())
+            running_output.extend(output.reshape(-1,).detach().cpu().numpy())
+            running_correlation, _ = pearsonr(running_output, running_labels)
         
-        optimizer = optim.AdamW(self.parameters(), 
-                                lr=learning_rate, 
-                                weight_decay=weight_decay)
-        criterion = nn.MSELoss()
 
-        for epoch in range(max_epochs):
-            self.train()
+            batches.set_postfix({'Avg_loss': train_loss/(i*batch_size+len(output)),
+                                    'correlation': running_correlation})
+        
+        history['train_loss'].append(train_loss)
+        history['train_correlation'].append(running_correlation)
 
-            
-            train_loss = 0.0
-            running_output = list()
-            running_labels = list()
-
-            train_dataloader = DataLoader(train_dataset, 
-                                          batch_size=batch_size, 
-                                          shuffle=True, 
-                                          collate_fn=train_dataset.collate_fn, 
-                                          drop_last=False)
-            batches = tqdm(train_dataloader, 
-                           desc=f'Epoch {epoch+1}',
-                           unit='batch', 
-                           total=(len(train_dataset)//batch_size)+(1 if len(train_dataset)%batch_size else 0))
-
-            for i, batch in enumerate(batches):
-                output = self(batch['original'].tolist(),
-                              batch['translation'].tolist(),
-                              batch['original_lang'].tolist(),
-                              batch['translation_lang'].tolist())
+        if validation_dataset:
+            model.eval()
+            with torch.no_grad():
+                validation_dataloader = DataLoader(validation_dataset, 
+                                                    batch_size=batch_size,
+                                                    collate_fn=collate_fn, 
+                                                    drop_last=False)
                 
-                labels = torch.tensor(batch['mean'].tolist(), dtype=torch.float).to(self.device)
+                val_loss = 0.0
+                running_val_output = list()
+                running_val_labels = list()
 
-                optimizer.zero_grad()
+                batches = tqdm(validation_dataloader, 
+                                desc=f'Validation {epoch+1}', 
+                                unit='batch', 
+                                total=(len(validation_dataset)//batch_size)+(1 if len(validation_dataset)%batch_size else 0))
 
-                loss = criterion(output.squeeze(), labels)
-                loss.backward()
-                optimizer.step()
-
-                train_loss += loss.item() * len(output)
-                running_labels.extend(labels.reshape(-1,).detach().cpu().numpy())
-                running_output.extend(output.reshape(-1,).detach().cpu().numpy())
-                running_correlation, _ = pearsonr(running_output, running_labels)
-            
-
-                batches.set_postfix({'Avg_loss': train_loss/(i*batch_size+len(output)),
-                                     'correlation': running_correlation})
-            
-            if validation_dataset:
-                self.eval()
-                with torch.no_grad():
-                    validation_dataloader = DataLoader(validation_dataset, 
-                                                       batch_size=batch_size,
-                                                       collate_fn=validation_dataset.collate_fn, 
-                                                       drop_last=False)
+                for i, batch in enumerate(batches):
+                    output = model(batch['original'].tolist(),
+                                    batch['translation'].tolist(),
+                                    batch['original_lang'].tolist(),
+                                    batch['translation_lang'].tolist())
                     
-                    val_loss = 0.0
-                    running_val_output = list()
-                    running_val_labels = list()
+                    labels = torch.tensor(batch['mean'].tolist(), dtype=torch.float).to(model.device)
 
-                    batches = tqdm(validation_dataloader, 
-                                   desc=f'Validation {epoch+1}', 
-                                   unit='batch', 
-                                   total=(len(validation_dataset)//batch_size)+(1 if len(validation_dataset)%batch_size else 0))
+                    loss = criterion(output.squeeze(), labels)
 
-                    for i, batch in enumerate(batches):
-                        output = self(batch['original'].tolist(),
-                                      batch['translation'].tolist(),
-                                      batch['original_lang'].tolist(),
-                                      batch['translation_lang'].tolist())
-                        
-                        labels = torch.tensor(batch['mean'].tolist(), dtype=torch.float).to(self.device)
+                    val_loss += loss.item() * len(output)
+                    running_val_labels.extend(labels.reshape(-1,).detach().cpu().numpy())
+                    running_val_output.extend(output.reshape(-1,).detach().cpu().numpy())
+                    running_val_correlation, _ = pearsonr(running_val_output, running_val_labels)
+                
 
-                        loss = criterion(output.squeeze(), labels)
+                    batches.set_postfix({'Avg_loss': val_loss/(i*batch_size+len(output)),
+                                            'correlation': running_val_correlation})
 
-                        val_loss += loss.item() * len(output)
-                        running_val_labels.extend(labels.reshape(-1,).detach().cpu().numpy())
-                        running_val_output.extend(output.reshape(-1,).detach().cpu().numpy())
-                        running_val_correlation, _ = pearsonr(running_val_output, running_val_labels)
-                    
+                history['validation_loss'].append(val_loss)
+                history['validation_correlation'].append(running_val_correlation)
 
-                        batches.set_postfix({'Avg_loss': val_loss/(i*batch_size+len(output)),
-                                             'correlation': running_val_correlation})
-                             
+        if save_latest_checkpoint:
+            model_path = outdir + outname + f'.last.checkpoint.pt'
+            checkpoint = {'epoch': epoch,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'history': history}
+            torch.save(checkpoint, model_path)
+        
+        if save_best_checkpoint:
+            if validation_dataset and \
+                max(history['validation_correlation']) == history['validation_correlation'][-1]:
+                    model_path = outdir + outname + f'.best.checkpoint.pt'
+                    checkpoint = {'epoch': epoch,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'history': history}
+                    torch.save(checkpoint, model_path)
+        
+        if save_current_checkpoint:
+            model_path = outdir + outname + f'.epoch-{epoch}.checkpoint.pt'
+            checkpoint = {'epoch': epoch,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'history': history}
+            torch.save(checkpoint, model_path)
+    return history
 
+def eval_model(model,
+               dataset,
+               batch_size=128,
+               collate_fn=None):
+    
+    if hasattr(dataset, 'collate_fn'):
+        collate_fn = dataset.collate_fn
+    
+    criterion = nn.MSELoss()
+    model.eval()
+    with torch.no_grad():
+        validation_dataloader = DataLoader(validation_dataset, 
+                                           batch_size=batch_size,
+                                           collate_fn=collate_fn, 
+                                           drop_last=False)
+        
+        val_loss = 0.0
+        running_val_output = list()
+        running_val_labels = list()
 
+        batches = tqdm(validation_dataloader, 
+                       desc=f'Evaluation', 
+                       unit='batch', 
+                       total=(len(validation_dataset)//batch_size)+(1 if len(validation_dataset)%batch_size else 0))
 
+        for i, batch in enumerate(batches):
+            output = model(batch['original'].tolist(),
+                           batch['translation'].tolist(),
+                           batch['original_lang'].tolist(),
+                           batch['translation_lang'].tolist())
+            
+            labels = torch.tensor(batch['mean'].tolist(), dtype=torch.float).to(model.device)
 
+            loss = criterion(output.squeeze(), labels)
 
+            val_loss += loss.item() * len(output)
+            running_val_labels.extend(labels.reshape(-1,).detach().cpu().numpy())
+            running_val_output.extend(output.reshape(-1,).detach().cpu().numpy())
+            running_val_correlation, _ = pearsonr(running_val_output, running_val_labels)
+        
+            batches.set_postfix({'Avg_loss': val_loss/(i*batch_size+len(output)),
+                                 'correlation': running_val_correlation})
 
+    print(f'Evaluation complete!\nTotal Loss: {val_loss}\nAverage Loss: {val_loss/len(dataset)}\nPearson r correlation: {running_val_correlation}')
+    return {'total_loss': val_loss, 'avg_loss': val_loss/len(dataset), 'correlation': running_val_correlation}
 
-
+def predict(model,
+            original_sents,
+            translation_sents,
+            original_langs=None,
+            translation_langs=None):
+    predictions = model(original_sents,
+                        translation_sents,
+                        original_langs,
+                        translation_langs)
+    return pd.DataFrame({'original': original_sents, 
+               'translation': translation_sents, 
+               'predictions': predictions.tolist()})
+    
+    
 
 if __name__ == '__main__':
 
@@ -226,9 +343,13 @@ if __name__ == '__main__':
     data_path = "/home/norrman/GitHub/RND/data/direct-assessments/"
     langs = "en", "de", "ro" , "ru"
 
+    outdir = "/home/norrman/GitHub/RND/models/"
+    outname = "test_model"
+
+
     print('Loading Dataset...')
-    train_dataset = QEDataset(data_path+'train', langs)
-    validation_dataset = QEDataset(data_path+'dev', langs)
+    train_dataset = QEDataset(data_path+'dev', langs)
+    validation_dataset = QEDataset(data_path+'test', langs)
 
     print('Loading Model...')
     # embedder =  MultilingualStaticSentenceEmbedder(embedding_file_path=embedding_path, langs=langs)
@@ -241,10 +362,29 @@ if __name__ == '__main__':
                     estimator_hidden_size=4096, 
                     estimator_hidden_layers=2,
                     dropout=0.2)
+    
+    checkpoint = None
+    # checkpoint = torch.load('/home/norrman/GitHub/RND/models/test_model.best.checkpoint.pt')
+    # model.load_state_dict(checkpoint['model_state_dict'])
 
     print('Training Model...')
-    model.train_model(train_dataset=train_dataset,
-                      validation_dataset=validation_dataset, 
-                      batch_size=16, 
-                      max_epochs=10)
+    train_model(model=model,
+                dataset=train_dataset,
+                validation_dataset=None,
+                validation_size=300, 
+                batch_size=16, 
+                max_epochs=2,
+                outdir=outdir,
+                outname=outname,
+                save_best_checkpoint=True,
+                save_current_checkpoint=False,
+                save_latest_checkpoint=True,
+                checkpoint=checkpoint)
+    
+    eval_model(model=model,
+               dataset=validation_dataset)
+    
+    print(predict(model=model,
+                  original_sents=validation_dataset.data['original'].tolist(),
+                  translation_sents=validation_dataset.data['translation'].tolist()))
     
