@@ -324,6 +324,7 @@ def train_model(model,
                                             mode='min',
                                             factor=lr_scheduler_gamma,
                                             patience=1)
+            history = {'train_loss': [], 'validation_loss': [], 'train_correlation': [], 'validation_correlation': [], 'lr': []}
 
     return history
 
@@ -379,6 +380,7 @@ def predict(model,
             translation_sents,
             original_langs=None,
             translation_langs=None):
+    model.eval()                        
     predictions = model(original_sents,
                         translation_sents,
                         original_langs,
