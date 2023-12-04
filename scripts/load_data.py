@@ -107,9 +107,9 @@ if __name__ == '__main__':
     dataset = QEDataset(path, langs)
     dataloader = iter(DataLoader(dataset, batch_size=120, 
                                  shuffle=True, 
-                                 collate_fn=QEDataset.custom_collate_fn))
+                                 collate_fn=QEDataset.collate_fn))
 
-    batch = next(dataloader)
+    print(dataset.data)
     
 
     

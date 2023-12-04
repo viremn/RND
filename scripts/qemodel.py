@@ -145,7 +145,8 @@ def train_model(model,
                 save_latest_checkpoint=True,
                 save_best_checkpoint=True,
                 save_current_checkpoint=False,
-                verbose=True):
+                verbose=True,
+                terminate_on_lr=1e-7):
     
     if isinstance(outdir, str) and not outdir.endswith('/'):
         outdir += '/'
@@ -190,6 +191,10 @@ def train_model(model,
 
             current_lr = [groups['lr'] for groups in optimizer.param_groups][0]
             history['lr'].append(current_lr)
+
+            if current_lr < terminate_on_lr:
+                print('Ending training early due to reaching terminal learning rate...')
+                break
 
             train_loss = 0.0
             running_output = list()
@@ -279,9 +284,7 @@ def train_model(model,
                                                 'correlation': running_val_correlation})
 
                     history['validation_loss'].append(val_loss)
-                    history['validation_correlation'].append(running_val_correlation)
-
-                    
+                    history['validation_correlation'].append(running_val_correlation)    
 
             if schedule_lr:
                 lr_scheduler.step(history['validation_loss'][-1])
@@ -311,6 +314,9 @@ def train_model(model,
                                 'optimizer_state_dict': optimizer.state_dict(),
                                 'history': history}
                 torch.save(checkpoint, model_path)
+
+            
+
         if not bad_start:
             complete = True
         else:
@@ -532,7 +538,7 @@ if __name__ == '__main__':
                 validation_dataset=None,
                 validation_size=300, 
                 batch_size=16, 
-                max_epochs=10,
+                max_epochs=1,
                 outdir=outdir,
                 outname=outname,
                 save_best_checkpoint=True,
@@ -541,8 +547,13 @@ if __name__ == '__main__':
                 checkpoint=checkpoint,
                 verbose=True)
     
-    eval_model(model=model,
-               dataset=validation_dataset)
+    eval_dict = eval_model(model=model,
+                           dataset=validation_dataset)
+    
+    print(eval_dict)
+    eval_df = pd.DataFrame(eval_dict, index=[0])
+    
+    eval_df.to_csv('test_df.csv')
     
     # print(predict(model=model,
     #               original_sents=validation_dataset.data['original'].tolist(),
