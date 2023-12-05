@@ -102,7 +102,7 @@ class QEDataset(Dataset):
 
 if __name__ == '__main__':
     path = "/home/norrman/GitHub/RND/data/direct-assessments/train"
-    langs = "en", "de", "ro" , "ru"
+    langs = "en", "de"
     
     dataset = QEDataset(path, langs)
     dataloader = iter(DataLoader(dataset, batch_size=120, 
