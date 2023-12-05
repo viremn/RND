@@ -1,0 +1,2 @@
+,dropout,learning_rate,weight_decay,lr_scheduler_gamma,validation_accuracy,model_architecture
+0,0.1,2.672696079211378e-05,7.458231564763215e-05,0.7000000000000001,0.6877168091744184,base

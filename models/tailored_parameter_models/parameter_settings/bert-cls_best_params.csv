@@ -1,0 +1,2 @@
+,dropout,learning_rate,weight_decay,lr_scheduler_gamma,validation_accuracy,model_architecture
+0,0.1,0.00023658986073689422,6.219854079420048e-05,0.2,0.659189276474516,deep_encoder_shallow_estimator

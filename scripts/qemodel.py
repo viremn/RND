@@ -146,7 +146,8 @@ def train_model(model,
                 save_best_checkpoint=True,
                 save_current_checkpoint=False,
                 verbose=True,
-                terminate_on_lr=1e-7):
+                terminate_on_lr=1e-7,
+                tolerate_bad_starts=True):
     
     if isinstance(outdir, str) and not outdir.endswith('/'):
         outdir += '/'
@@ -185,6 +186,8 @@ def train_model(model,
     while not complete:
         for epoch in range(start_epoch, max_epochs):
             if bad_start:
+                if not tolerate_bad_starts:
+                    return {'train_loss': [0], 'validation_loss': [0], 'train_correlation': [0], 'validation_correlation': [0], 'lr': [0]}
                 break
             
             model.train()
@@ -436,7 +439,9 @@ def objective(trial, dataset, data_splits, settings):
                             save_current_checkpoint=False,
                             save_latest_checkpoint=False,
                             checkpoint=None,
-                            verbose=settings['verbose'])
+                            verbose=settings['verbose'],
+                            terminate_on_lr=1e-7,
+                            tolerate_bad_starts=False)
 
         performance.append(max(history['validation_correlation']))
 
@@ -471,9 +476,9 @@ def hyper_parameter_search(dataset,
     study.optimize(lambda trial: objective(trial, dataset, data_splits, settings), n_trials=n_trials)
 
     best_params = study.best_params
-    best_accuracy = study.best_value
+    best_correlation = study.best_value
 
-    print(f"Best hyperparameters: {best_params} with accuracy: {best_accuracy}")
+    print(f"Best hyperparameters: {best_params} with accuracy: {best_correlation}")
     
     return best_params
     
