@@ -19,7 +19,7 @@ from multilingual_embeddings import MultilingualStaticSentenceEmbedder, \
 #     yield 'bert-mean', BertSentenceEmbedder(pooling='mean')
 #     yield 'xlmr', XLMREmbedder()
 
-path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/bert-cls_best_params/'
+path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/xlmr_best_params/'
 
 last_checkpoints = [item for item in glob.glob(path+'*') if item.endswith('last.checkpoint.pt')]
 best_checkpoints = [item for item in glob.glob(path+'*') if item.endswith('best.checkpoint.pt')]
@@ -53,22 +53,22 @@ for best, last in checkpoints:
 
     print('evaluating:', outname)
 
-    if 'static' in best:
+    if 'static' in best.split("/")[-1].split('_')[0]:
         embedder = MultilingualStaticSentenceEmbedder(embedding_file_path='/home/norrman/GitHub/RND/data/embeddings/multilingual_embeddings.tar.gz',
                                                       langs=['en', 'de', 'ro', 'ru'])
-    elif 'laser' in best:
+    elif 'laser' in best.split("/")[-1].split('_')[0]:
         embedder = LASERSentenceEmbedder()
-    elif 'distil' in best:
+    elif 'distil' in best.split("/")[-1].split('_')[0]:
         embedder = DistilUSEEmbedder()
-    elif 'paraphrase' in best:
+    elif 'paraphrase' in best.split("/")[-1].split('_')[0]:
         embedder = ParaphraseEmbedder()
-    elif 'labse' in best:
+    elif 'labse' in best.split("/")[-1].split('_')[0]:
         embedder = LaBSEEmbedder() 
-    elif 'bert-cls' in best:
+    elif 'bert-cls' in best.split("/")[-1].split('_')[0]:
         embedder = BertSentenceEmbedder(pooling='cls')
-    elif 'bert-mean' in best:
+    elif 'bert-mean' in best.split("/")[-1].split('_')[0]:
         embedder = BertSentenceEmbedder(pooling='mean')
-    elif 'xlmr' in best:
+    elif 'xlmr' in best.split("/")[-1].split('_')[0]:
         embedder = XLMREmbedder()
 
 
@@ -85,22 +85,22 @@ for best, last in checkpoints:
     print('evaluating mixed test')
     mixed_eval = eval_model(model, mixed_test_dataset, batch_size=32)
     eval_df = pd.DataFrame(mixed_eval, index=[0])
-    eval_df.to_csv(f'{outname}_best_checkpoint_mixed_eval.csv')
+    eval_df.to_csv(f'{path+"evaluation/"+outname}_best_checkpoint_mixed_eval.csv')
 
     print('evaluating ru test')  
     ru_en_eval = eval_model(model, ru_en_test_dataset, batch_size=32)
     eval_df = pd.DataFrame(ru_en_eval, index=[0])
-    eval_df.to_csv(f'{outname}_best_checkpoint_ru_en_eval.csv')
+    eval_df.to_csv(f'{path+"evaluation/"+outname}_best_checkpoint_ru_en_eval.csv')
 
     print('evaluating ro test')
     ro_en_eval = eval_model(model, ro_en_test_dataset, batch_size=32)
     eval_df = pd.DataFrame(ro_en_eval, index=[0])
-    eval_df.to_csv(f'{outname}_best_checkpoint_ro_en_eval.csv')
+    eval_df.to_csv(f'{path+"evaluation/"+outname}_best_checkpoint_ro_en_eval.csv')
 
     print('evaluating de test')
     en_de_eval = eval_model(model, en_de_test_dataset, batch_size=32)
     eval_df = pd.DataFrame(en_de_eval, index=[0])
-    eval_df.to_csv(f'{outname}_best_checkpoint_en_de_eval.csv')
+    eval_df.to_csv(f'{path+"evaluation/"+outname}_best_checkpoint_en_de_eval.csv')
 
     model = QEModel(embedder=embedder,
                     encoder_dim=settings['Encoder Size'],
@@ -115,19 +115,19 @@ for best, last in checkpoints:
     print('evaluating mixed test')
     mixed_eval = eval_model(model, mixed_test_dataset, batch_size=32)
     eval_df = pd.DataFrame(mixed_eval, index=[0])
-    eval_df.to_csv(f'{outname}_last_checkpoint_mixed_eval.csv')
+    eval_df.to_csv(f'{path+"evaluation/"+outname}_last_checkpoint_mixed_eval.csv')
 
     print('evaluating ru test')  
     ru_en_eval = eval_model(model, ru_en_test_dataset, batch_size=32)
     eval_df = pd.DataFrame(ru_en_eval, index=[0])
-    eval_df.to_csv(f'{outname}_last_checkpoint_ru_en_eval.csv')
+    eval_df.to_csv(f'{path+"evaluation/"+outname}_last_checkpoint_ru_en_eval.csv')
 
     print('evaluating ro test')
     ro_en_eval = eval_model(model, ro_en_test_dataset, batch_size=32)
     eval_df = pd.DataFrame(ro_en_eval, index=[0])
-    eval_df.to_csv(f'{outname}_last_checkpoint_ro_en_eval.csv')
+    eval_df.to_csv(f'{path+"evaluation/"+outname}_last_checkpoint_ro_en_eval.csv')
 
     print('evaluating de test')
     en_de_eval = eval_model(model, en_de_test_dataset, batch_size=32)
     eval_df = pd.DataFrame(en_de_eval, index=[0])
-    eval_df.to_csv(f'{outname}_last_checkpoint_en_de_eval.csv')
+    eval_df.to_csv(f'{path+"evaluation/"+outname}_last_checkpoint_en_de_eval.csv')

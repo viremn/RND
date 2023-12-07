@@ -96,7 +96,7 @@ if __name__ == '__main__':
             print(model_arc_param)
             print(setting)
                     
-            torch.manual_seed(0)
+            torch.manual_seed(1)
             model = QEModel(embedder=embedder,
                             encoder_dim=1024,
                             encoder_depth=model_arc_param['encoder_depth'],
