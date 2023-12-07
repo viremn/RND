@@ -1,0 +1,2 @@
+,mean_score,std_score,orig_avg_sent_len,orig_std_sent_len,trans_avg_sent_len,trans_std_sent_len,orig_total_toks,orig_unique_toks,trans_total_toks,trans_unique_toks
+0,85.96736021205358,11.103871545680517,16.360285714285713,5.01989412848762,16.046142857142858,5.093386410086023,114522,27775,112323,28928

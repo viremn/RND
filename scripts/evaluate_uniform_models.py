@@ -19,16 +19,16 @@ from multilingual_embeddings import MultilingualStaticSentenceEmbedder, \
 #     yield 'bert-mean', BertSentenceEmbedder(pooling='mean')
 #     yield 'xlmr', XLMREmbedder()
 
-path = '/home/norrman/GitHub/RND/models/uniform_model_settings/'
+path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/bert-cls_best_params/'
 
 last_checkpoints = [item for item in glob.glob(path+'*') if item.endswith('last.checkpoint.pt')]
 best_checkpoints = [item for item in glob.glob(path+'*') if item.endswith('best.checkpoint.pt')]
 
 checkpoints = [(cb, cl) for cb in best_checkpoints for cl in last_checkpoints if cb.split('.')[0] == cl.split('.')[0]]
 
-settings = {'Learning Rate': 1.00E-03,
+settings = {'Learning Rate': 0.00023658986073689422,
                 'Weight Decay': 1.00E-05,
-                'Dropout': 0.2,
+                'Dropout': 0.1,
                 'LR Scheduler Factor': 0.1,
                 'Encoder Depth': 2,
                 'Encoder Size': 1024,

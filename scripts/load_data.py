@@ -5,7 +5,11 @@ import numpy as np
 import json
 from tqdm import tqdm
 import torch
+import numpy
 from torch.utils.data import Dataset, DataLoader
+from nltk.tokenize import word_tokenize
+
+import nltk
 
 class tarUnzipper:
     @staticmethod
@@ -98,18 +102,71 @@ class QEDataset(Dataset):
     @staticmethod
     def collate_fn(batch):
         return pd.DataFrame(batch)
-        
+
+def get_dataset_stats(dataset):
+    scores = numpy.array(dataset.data['mean'].tolist())
+    orig_sent_len = list()
+    trans_sent_len = list()
+    orig_unique_toks = set()
+    trans_unique_toks = set()
+
+    for index, row in dataset.data.iterrows():
+        if row['translation_lang'] == 'en':
+            trans_lang = 'english'
+        elif row['translation_lang'] == 'de':
+            trans_lang = 'german'
+        if row['original_lang'] == 'ru':
+            orig_lang = 'russian'
+        elif row['original_lang'] == 'ro':
+            orig_lang = 'romanian'
+        elif row['original_lang'] == 'en':
+            orig_lang = 'english'
+            
+
+        # orig_toks = word_tokenize(row['original'], language=orig_lang)
+        orig_toks = row['original'].replace('.', ' .')
+        orig_toks = orig_toks.replace(',', ' ,')
+        orig_toks = orig_toks.replace('!', ' !')
+        orig_toks = orig_toks.replace('?', ' ?')
+        orig_toks = orig_toks.replace('(', '( ')
+        orig_toks = orig_toks.replace(')', ' )')
+        orig_toks = orig_toks.replace('"', ' " ')
+        orig_toks = orig_toks.replace("'", " ' ")
+        orig_toks = orig_toks.split()
+
+        trans_toks = word_tokenize(row['translation'], language=trans_lang)
+
+        orig_unique_toks.update(set(orig_toks))
+        trans_unique_toks.update(set(trans_toks))
+
+        orig_sent_len.append(len(orig_toks))
+        trans_sent_len.append(len(trans_toks))
+
+    return pd.DataFrame({'mean_score': scores.mean(), 
+            'std_score': scores.std(), 
+            'orig_avg_sent_len': numpy.array(orig_sent_len).mean(),
+            'orig_std_sent_len': numpy.array(orig_sent_len).std(),
+            'trans_avg_sent_len': numpy.array(trans_sent_len).mean(),
+            'trans_std_sent_len': numpy.array(trans_sent_len).std(),
+            'orig_total_toks': numpy.array(orig_sent_len).sum(),
+            'orig_unique_toks': len(orig_unique_toks),
+            'trans_total_toks': numpy.array(trans_sent_len).sum(),
+            'trans_unique_toks': len(trans_unique_toks)}, index=[0])
+
+def get_hundred(dataset):
+    sample = dataset.data.sample(n=100)
+    sample = sample[['original', 'translation']]
+
+    return sample
 
 if __name__ == '__main__':
     path = "/home/norrman/GitHub/RND/data/direct-assessments/train"
     langs = "en", "de"
     
     dataset = QEDataset(path, langs)
-    dataloader = iter(DataLoader(dataset, batch_size=120, 
-                                 shuffle=True, 
-                                 collate_fn=QEDataset.collate_fn))
 
-    print(dataset.data)
+    get_hundred(dataset).to_csv('german_100_sample_translations.csv')
+    
     
 
     
