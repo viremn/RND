@@ -2,7 +2,7 @@ import glob
 import torch
 import pandas as pd
 
-path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/laser_best_params/'
+path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/laser_best_params/run2/'
 
 checkpoints = [item for item in glob.glob(path+'*') if item.endswith('last.checkpoint.pt')]
 print(checkpoints)

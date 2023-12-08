@@ -1,7 +1,7 @@
 import glob
 import pandas as pd
 
-path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/xlmr_best_params/evaluation/'
+path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/xlmr_best_params/run1/zero_shot/'
 
 files = glob.glob(path+'*')
 
@@ -17,7 +17,9 @@ for file in files:
                 +'_'+('mixed' if 'mixed' in file.split('/')[-1].split('_')[-3:] 
                     else ('ru' if 'ru' in file.split('/')[-1].split('_')[-3:]
                             else ('ro' if 'ro' in file.split('/')[-1].split('_')[-3:] 
-                                else 'de')))
+                                else ('de' if 'de' in file.split('/')[-1].split('_')[-3:]
+                                      else ('zh' if 'zh' in file.split('/')[-1].split('_')[-3:]
+                                            else 'et')))))
         # name = file.split('/')[-1].split('.')[0]
         items = lines[1].strip().split(',')[1:]
         combined_csv.loc[name] = items

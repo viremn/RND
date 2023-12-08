@@ -19,7 +19,7 @@ from multilingual_embeddings import MultilingualStaticSentenceEmbedder, \
 #     yield 'bert-mean', BertSentenceEmbedder(pooling='mean')
 #     yield 'xlmr', XLMREmbedder()
 
-path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/xlmr_best_params/'
+path = '/home/norrman/GitHub/RND/models/tailored_parameter_models/xlmr_best_params/run2/'
 
 last_checkpoints = [item for item in glob.glob(path+'*') if item.endswith('last.checkpoint.pt')]
 best_checkpoints = [item for item in glob.glob(path+'*') if item.endswith('best.checkpoint.pt')]
