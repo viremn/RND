@@ -9,6 +9,14 @@ import numpy
 from torch.utils.data import Dataset, DataLoader
 from nltk.tokenize import word_tokenize
 
+from spacy.tokenizer import Tokenizer
+from spacy.lang.ro import Romanian
+from spacy.lang.en import English
+from spacy.lang.ru import Russian
+from spacy.lang.et import Estonian
+from spacy.lang.zh import Chinese
+from spacy.lang.de import German
+
 import nltk
 
 class tarUnzipper:
@@ -103,7 +111,7 @@ class QEDataset(Dataset):
     def collate_fn(batch):
         return pd.DataFrame(batch)
 
-def get_dataset_stats(dataset):
+def get_dataset_stats(dataset, tokenizer):
     scores = numpy.array(dataset.data['mean'].tolist())
     orig_sent_len = list()
     trans_sent_len = list()
@@ -113,28 +121,33 @@ def get_dataset_stats(dataset):
     for index, row in dataset.data.iterrows():
         if row['translation_lang'] == 'en':
             trans_lang = 'english'
+            trans_nlp = English()
         elif row['translation_lang'] == 'de':
             trans_lang = 'german'
+            trans_nlp = German()
+        elif row['translation_lang'] == 'zh':
+            trans_lang = 'chinese'
+            trans_nlp = Chinese()
         if row['original_lang'] == 'ru':
             orig_lang = 'russian'
+            orig_nlp = Russian()
         elif row['original_lang'] == 'ro':
             orig_lang = 'romanian'
+            orig_nlp = Romanian()
         elif row['original_lang'] == 'en':
             orig_lang = 'english'
+            orig_nlp = English()
+        elif row['original_lang'] == 'et':
+            orig_lang = 'estonian'
+            orig_nlp = Estonian()
+
+        orig_tokenizer = Tokenizer(orig_nlp.vocab)
+        trans_tokenizer = Tokenizer(trans_nlp.vocab)
             
 
-        # orig_toks = word_tokenize(row['original'], language=orig_lang)
-        orig_toks = row['original'].replace('.', ' .')
-        orig_toks = orig_toks.replace(',', ' ,')
-        orig_toks = orig_toks.replace('!', ' !')
-        orig_toks = orig_toks.replace('?', ' ?')
-        orig_toks = orig_toks.replace('(', '( ')
-        orig_toks = orig_toks.replace(')', ' )')
-        orig_toks = orig_toks.replace('"', ' " ')
-        orig_toks = orig_toks.replace("'", " ' ")
-        orig_toks = orig_toks.split()
+        orig_toks = orig_tokenizer(row['original'])
 
-        trans_toks = word_tokenize(row['translation'], language=trans_lang)
+        trans_toks = trans_tokenizer(row['translation'])
 
         orig_unique_toks.update(set(orig_toks))
         trans_unique_toks.update(set(trans_toks))
@@ -160,12 +173,12 @@ def get_hundred(dataset):
     return sample
 
 if __name__ == '__main__':
-    path = "/home/norrman/GitHub/RND/data/direct-assessments/train"
-    langs = "en", "de"
+    path = "/home/norrman/GitHub/RND/data/direct-assessments/test"
+    langs = "en", "et"
     
     dataset = QEDataset(path, langs)
 
-    get_hundred(dataset).to_csv('german_100_sample_translations.csv')
+    get_dataset_stats(dataset).to_csv('et_en_test_dataset_stats.csv')
     
     
 
