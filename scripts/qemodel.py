@@ -515,7 +515,7 @@ if __name__ == '__main__':
 
     print('Loading Model...')
     # embedder =  MultilingualStaticSentenceEmbedder(embedding_file_path=embedding_path, langs=langs)
-    embedder = BertSentenceEmbedder(pooling='mean')
+    embedder = XLMREmbedder()
 
 
     # data_splits = cross_fold_splits(train_dataset, num_splits=5)
@@ -537,23 +537,24 @@ if __name__ == '__main__':
     # checkpoint = torch.load('/home/norrman/GitHub/RND/models/test_model.best.checkpoint.pt')
     # model.load_state_dict(checkpoint['model_state_dict'])
 
-    # print('Training Model...')
-    # train_model(model=model,
-    #             dataset=train_dataset,
-    #             validation_dataset=None,
-    #             validation_size=300, 
-    #             batch_size=32, 
-    #             max_epochs=15,
-    #             outdir=outdir,
-    #             outname=outname,
-    #             save_best_checkpoint=True,
-    #             save_current_checkpoint=False,
-    #             save_latest_checkpoint=True,
-    #             checkpoint=checkpoint,
-    #             verbose=True)
+    print('Training Model...')
+    train_model(model=model,
+                dataset=train_dataset,
+                validation_dataset=None,
+                validation_size=1000, 
+                batch_size=32, 
+                max_epochs=10,
+                outdir=outdir,
+                outname=outname,
+                save_best_checkpoint=True,
+                save_current_checkpoint=False,
+                save_latest_checkpoint=True,
+                checkpoint=checkpoint,
+                verbose=True)
     
-    loaded = torch.load('/home/norrman/GitHub/RND/models/uniform_model_settings/bert-mean_deep_encoder_shallow_estimator_uniform.best.checkpoint.pt')
-    model.load_state_dict(loaded['model_state_dict'])
+    # loaded = torch.load('/home/norrman/GitHub/RND/models/uniform_model_settings/bert-mean_deep_encoder_shallow_estimator_uniform.best.checkpoint.pt')
+    # model.load_state_dict(loaded['model_state_dict'])
+    
     eval_dict = eval_model(model=model,
                            dataset=validation_dataset,
                            batch_size=32)

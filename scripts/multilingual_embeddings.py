@@ -93,7 +93,7 @@ class DistilUSEEmbedder:
 class XLMREmbedder:
     def __init__(self) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.embedder = SentenceTransformer('sentence-transformers/stsb-xlm-r-multilingual', device=self.device)
+        self.embedder = SentenceTransformer('xlm-roberta-large', device=self.device)
         for p in self.embedder.parameters():
             p.requires_grad = False
         self.outdim = 768
