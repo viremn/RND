@@ -170,11 +170,11 @@ def get_hundred(dataset):
 
 if __name__ == '__main__':
     path = "/home/norrman/GitHub/RND/data/direct-assessments/test"
-    langs = "en", "zh"
+    langs = "en", "de"
     
     dataset = QEDataset(path, langs)
 
-    get_dataset_stats(dataset).to_csv('en_zh_test_dataset_stats.csv')
+    print(dataset.data)
     
     
 
