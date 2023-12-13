@@ -111,7 +111,7 @@ class QEDataset(Dataset):
     def collate_fn(batch):
         return pd.DataFrame(batch)
 
-def get_dataset_stats(dataset, tokenizer):
+def get_dataset_stats(dataset):
     scores = numpy.array(dataset.data['mean'].tolist())
     orig_sent_len = list()
     trans_sent_len = list()
@@ -121,50 +121,46 @@ def get_dataset_stats(dataset, tokenizer):
     for index, row in dataset.data.iterrows():
         if row['translation_lang'] == 'en':
             trans_lang = 'english'
-            trans_nlp = English()
+
         elif row['translation_lang'] == 'de':
             trans_lang = 'german'
-            trans_nlp = German()
+         
         elif row['translation_lang'] == 'zh':
             trans_lang = 'chinese'
-            trans_nlp = Chinese()
+    
         if row['original_lang'] == 'ru':
             orig_lang = 'russian'
-            orig_nlp = Russian()
+  
         elif row['original_lang'] == 'ro':
             orig_lang = 'romanian'
-            orig_nlp = Romanian()
+    
         elif row['original_lang'] == 'en':
             orig_lang = 'english'
-            orig_nlp = English()
+   
         elif row['original_lang'] == 'et':
             orig_lang = 'estonian'
-            orig_nlp = Estonian()
 
-        orig_tokenizer = Tokenizer(orig_nlp.vocab)
-        trans_tokenizer = Tokenizer(trans_nlp.vocab)
-            
 
-        orig_toks = orig_tokenizer(row['original'])
+        orig_toks = word_tokenize(row['original'], language=orig_lang)
 
-        trans_toks = trans_tokenizer(row['translation'])
 
         orig_unique_toks.update(set(orig_toks))
-        trans_unique_toks.update(set(trans_toks))
+        # trans_unique_toks.update(set(trans_toks))
 
         orig_sent_len.append(len(orig_toks))
-        trans_sent_len.append(len(trans_toks))
+        # trans_sent_len.append(len(trans_toks))
 
     return pd.DataFrame({'mean_score': scores.mean(), 
-            'std_score': scores.std(), 
-            'orig_avg_sent_len': numpy.array(orig_sent_len).mean(),
-            'orig_std_sent_len': numpy.array(orig_sent_len).std(),
-            'trans_avg_sent_len': numpy.array(trans_sent_len).mean(),
-            'trans_std_sent_len': numpy.array(trans_sent_len).std(),
-            'orig_total_toks': numpy.array(orig_sent_len).sum(),
-            'orig_unique_toks': len(orig_unique_toks),
-            'trans_total_toks': numpy.array(trans_sent_len).sum(),
-            'trans_unique_toks': len(trans_unique_toks)}, index=[0])
+                            'std_score': scores.std(), 
+                            'orig_avg_sent_len': numpy.array(orig_sent_len).mean(),
+                            'orig_std_sent_len': numpy.array(orig_sent_len).std(),
+                            # 'trans_avg_sent_len': numpy.array(trans_sent_len).mean(),
+                            # 'trans_std_sent_len': numpy.array(trans_sent_len).std(),
+                            'orig_total_toks': numpy.array(orig_sent_len).sum(),
+                            'orig_unique_toks': len(orig_unique_toks),
+                            # 'trans_total_toks': numpy.array(trans_sent_len).sum(),
+                            # 'trans_unique_toks': len(trans_unique_toks)
+                        }, index=[0])
 
 def get_hundred(dataset):
     sample = dataset.data.sample(n=100)
@@ -174,11 +170,11 @@ def get_hundred(dataset):
 
 if __name__ == '__main__':
     path = "/home/norrman/GitHub/RND/data/direct-assessments/test"
-    langs = "en", "et"
+    langs = "en", "zh"
     
     dataset = QEDataset(path, langs)
 
-    get_dataset_stats(dataset).to_csv('et_en_test_dataset_stats.csv')
+    get_dataset_stats(dataset).to_csv('en_zh_test_dataset_stats.csv')
     
     
 
